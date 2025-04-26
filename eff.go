@@ -58,6 +58,18 @@ func AndNone[S, V any](e Eff[S, V]) Eff[And[S, None], V] {
 	})(e)
 }
 
+func Provide[S, V any](e Eff[S, V], s S) Eff[None, V] {
+	return ProvideLeft(AndNone(e), s)
+}
+
+func ProvideBoth[A, B, V any](e Eff[And[A, B], V], a A, b B) Eff[None, V] {
+	return Provide(ProvideLeft(e, a), b)
+}
+
+func ProvideRight[A, B, V any](e Eff[And[A, B], V], b B) Eff[A, V] {
+	return ProvideLeft(Rotate(e), b)
+}
+
 func ProvideLeft[A, B, V any](e Eff[And[A, B], V], a A) Eff[B, V] {
 	imm, sus := e()
 	if imm != nil {
