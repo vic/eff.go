@@ -7,11 +7,13 @@ type Writer[S any] func(*S)
 
 type ReadRq[S any] struct{}
 type ReadRs[S any] = *S
-type ReadEff[S any] = eff.SusEff[ReadRq[S], ReadRs[S], eff.None]
+type ReadAb[S any] = eff.Ability[ReadRq[S], ReadRs[S], eff.None]
+type ReadEff[S any] = eff.Eff[ReadAb[S], ReadRs[S]]
 
 type WriteRq[S any] = *S
 type WriteRs[S any] struct{}
-type WriteEff[S any] = eff.SusEff[WriteRq[S], WriteRs[S], eff.None]
+type WriteAb[S any] = eff.Ability[WriteRq[S], WriteRs[S], eff.None]
+type WriteEff[S any] = eff.Eff[WriteAb[S], WriteRs[S]]
 
 func Read[S any]() ReadEff[S] {
 	return eff.Suspend[ReadEff[S]](ReadRq[S]{})

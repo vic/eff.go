@@ -1,6 +1,8 @@
 package eff
 
-import "testing"
+import (
+	"testing"
+)
 
 type Person struct {
 	name string
@@ -20,13 +22,14 @@ func TestPure(t *testing.T) {
 	}
 }
 
-type Console[printSt any] struct{}
+type Console[S any] struct{}
 type printRq string
 type printRs int
-type printEff[printSt any] = SusEff[printRq, printRs, printSt]
+type printAb[S any] = Ability[printRq, printRs, S]
+type printEff[S any] = Eff[printAb[S], printRs]
 
-func (c Console[printSt]) PrintLn(line string) printEff[printSt] {
-	return Suspend[printEff[printSt]](printRq(line))
+func (c Console[S]) PrintLn(line string) printEff[S] {
+	return Suspend[printEff[S]](printRq(line))
 }
 
 func dontPrintHandler() Handler[printRq, printRs, None] {

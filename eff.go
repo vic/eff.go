@@ -148,9 +148,9 @@ func FlatMap[A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V]) Eff[And[A, B], V]
 
 type Cont[S, O any] func(O) Eff[S, O]
 type Handler[I, O, S any] func(I, Cont[S, O]) Eff[S, O]
-type SusEff[I, O, S any] = Eff[And[Handler[I, O, S], S], O]
+type Ability[I, O, S any] = And[Handler[I, O, S], S]
 
-func Suspend[SE SusEff[I, O, S], I, O, S any](input I) SE {
+func Suspend[E Eff[Ability[I, O, S], O], I, O, S any](input I) E {
 	type H = Handler[I, O, S]
 	continuation := func(o O) Eff[S, O] {
 		return Value[S](&o)
@@ -158,10 +158,10 @@ func Suspend[SE SusEff[I, O, S], I, O, S any](input I) SE {
 	eff := FlatMap(Ctx[H](), func(h H) Eff[S, O] {
 		return h(input, continuation)
 	})
-	return SE(eff)
+	return E(eff)
 }
 
-func Handle[V, I, O, S any](e Eff[And[Handler[I, O, S], S], V], h Handler[I, O, S]) Eff[S, V] {
+func Handle[V, I, O, S any](e Eff[Ability[I, O, S], V], h Handler[I, O, S]) Eff[S, V] {
 	return ProvideLeft(e, h)
 }
 
@@ -170,8 +170,8 @@ func HandleBoth[aI, aO, aS, bI, bO, bS any](
 	b Handler[bI, bO, bS],
 	e Eff[
 		And[
-			And[Handler[aI, aO, aS], aS],
-			And[Handler[bI, bO, bS], bS],
+			Ability[aI, aO, aS],
+			Ability[bI, bO, bS],
 		],
 		bO,
 	],
