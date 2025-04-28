@@ -1,4 +1,4 @@
-package state
+package rw
 
 import "github.com/vic/eff.go"
 
