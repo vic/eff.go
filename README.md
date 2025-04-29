@@ -51,7 +51,7 @@ An effect `Eff[S, V]` can be one of two possible values:
 
   Immediate values are created using the function `Pure[V](v *V)` that takes a pointer to an already existing value `V`.
 
-  The pointer of an immediate value can be retrieved using the function `Eval[V](eff Eff[None, V]) *V` which takes an effect with the `None` ability requirement.
+  The pointer of an immediate value can be retrieved using the function `Eval[V](eff Eff[Nil, V]) *V` which takes an effect with the `Nil` ability requirement.
 
 - A *Suspended value: `V` provided `S`*. That is, the computation of `V` is still pending, and `S` is needed for it to be completed.
 
@@ -74,7 +74,7 @@ An effect `Eff[S, V]` can be one of two possible values:
   var eff1 Eff[string, int] = Func(StringLength)
 
   // Notice that the effect requirement dissapears
-  var eff2 Eff[None, int] = Provide(eff1, "hello")
+  var eff2 Eff[Nil, int] = Provide(eff1, "hello")
 
   // Only immediate values (no unhandled requirements) can be evaled.
   if result, err := Eval(eff2); err == nil {
@@ -89,7 +89,7 @@ An effect `Eff[S, V]` can be one of two possible values:
 
 ### The `eff.Ability` and `eff.Handler` types.
 
-An `Ability` is the description of external services or side-effects that are needed for a computation. 
+An `Ability` is the description of external services or side-effects that are needed for a computation.
 
 For example, lets write a program that needs to perform http requests in order to complete. Such a program would create an http-request and expect an http-response from the web service it accesses. On an effects system like `eff.go`, we do not directly contact external services, we just express our need to perform such requests, and expect a `Handler` to actually decide how and when such requests should be performed (if any).
 
@@ -113,16 +113,16 @@ type HttpRs string
 // The Http Ability, specifies that we will:
 // - make HttpRq requests
 // - expect HttpRs responses
-// - and that this ability requires `None` other abilities.
-type HttpAb = Ability[HttpRq, HttpRs, None]
+// - and that this ability requires `Nil` other abilities.
+type HttpAb = Ability[HttpRq, HttpRs, Nil]
 
 // Produce an effect of fetching the given URL
 func Get(url string) Eff[HttpAb, HttpRs] {
     return Suspend[Eff[HttpAb, HttpRs]](HttpRq(url))
 }
 
-func BodyLength(r HttpRs) int { 
-    return len(r) 
+func BodyLength(r HttpRs) int {
+    return len(r)
 }
 
 // Computes the length of response from http://example.org
@@ -149,14 +149,14 @@ import (
 
 // A test handler for the HttpAb ability. mocks responses.
 // Notice this type has the same type parameters as HttpAb.
-type HttpTestHandler = Handler[HttpRq, HttpRs, None]
+type HttpTestHandler = Handler[HttpRq, HttpRs, Nil]
 func NewHttpTestHandler() HttpTestHandler {
     // A handler is nothing more than a function that takes:
     // - the ability request (HttpRq)
-    // - a continuation that will create an Eff[None, HttpRs].
-    //   In this example, the None requirement means that no
+    // - a continuation that will create an Eff[Nil, HttpRs].
+    //   In this example, the Nil requirement means that no
     //   other abilities are needed to compute the HttpRs response.
-    return func(rq HttpRq, cont Cont[None, HttpRs]) Eff[None, HttpRs] {
+    return func(rq HttpRq, cont Cont[Nil, HttpRs]) Eff[Nil, HttpRs] {
         // ignore request and produce a fixed response.
         return cont(HttpRs("hello"))
     }
@@ -167,7 +167,7 @@ func TestProgram(t *testing.T) {
     var program Eff[HttpAb, int] = Program()
     var handler HttpTestHandler = NewHttpTestHandler()
     var ability HttpAb = handler.Ability()
-    var handled Eff[None, int] = Provide(program, ability)
+    var handled Eff[Nil, int] = Provide(program, ability)
     var (
         result *int
         err    error

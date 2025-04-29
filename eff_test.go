@@ -32,8 +32,8 @@ func (c Console[S]) PrintLn(line string) printEff[S] {
 	return Suspend[printEff[S]](printRq(line))
 }
 
-func dontPrintHandler() Handler[printRq, printRs, None] {
-	return func(q printRq, f Cont[None, printRs]) Eff[None, printRs] {
+func dontPrintHandler() Handler[printRq, printRs, Nil] {
+	return func(q printRq, f Cont[Nil, printRs]) Eff[Nil, printRs] {
 		r := len(q)
 		return f(printRs(r))
 	}
@@ -41,7 +41,7 @@ func dontPrintHandler() Handler[printRq, printRs, None] {
 
 func TestHandleSimple(t *testing.T) {
 	h := dontPrintHandler()
-	e := Console[None]{}.PrintLn("hello")
+	e := Console[Nil]{}.PrintLn("hello")
 	f := Provide(e, h.Ability())
 	v, err := Eval(f)
 	if err != nil {

@@ -6,10 +6,10 @@ type immediate[V any] *V
 type suspended[S, V any] func(S) Eff[S, V]
 type Eff[S, V any] func() (immediate[V], suspended[S, V])
 
-type None *None
+type Nil *Nil
 
-func Pure[V any](v *V) Eff[None, V] {
-	return Value[None](v)
+func Pure[V any](v *V) Eff[Nil, V] {
+	return Value[Nil](v)
 }
 
 func Value[S, V any](v *V) Eff[S, V] {
@@ -52,17 +52,17 @@ func fst[A, B any](p And[A, B]) A {
 	return *a
 }
 
-func AndNone[S, V any](e Eff[S, V]) Eff[And[S, None], V] {
-	return cont(fst, func(v immediate[V]) Eff[And[S, None], V] {
-		return Value[And[S, None]](v)
+func AndNone[S, V any](e Eff[S, V]) Eff[And[S, Nil], V] {
+	return cont(fst, func(v immediate[V]) Eff[And[S, Nil], V] {
+		return Value[And[S, Nil]](v)
 	})(e)
 }
 
-func Provide[S, V any](e Eff[S, V], s S) Eff[None, V] {
+func Provide[S, V any](e Eff[S, V], s S) Eff[Nil, V] {
 	return ProvideLeft(AndNone(e), s)
 }
 
-func ProvideBoth[A, B, V any](e Eff[And[A, B], V], a A, b B) Eff[None, V] {
+func ProvideBoth[A, B, V any](e Eff[And[A, B], V], a A, b B) Eff[Nil, V] {
 	return Provide(ProvideLeft(e, a), b)
 }
 
@@ -179,7 +179,7 @@ func (h *Handler[I, O, S]) Ability() Ability[I, O, S] {
 	return Ability[I, O, S](left[S](h))
 }
 
-func Eval[V any](e Eff[None, V]) (*V, error) {
+func Eval[V any](e Eff[Nil, V]) (*V, error) {
 	imm, _ := e()
 	if imm != nil {
 		return imm, nil
