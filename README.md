@@ -74,7 +74,7 @@ An effect `Eff[S, V]` can be one of two possible values:
   var eff1 Eff[string, int] = Func(StringLength)
 
   // Notice that the effect requirement dissapears
-  var eff2 Eff[None, int] := Provide(eff1, "hello")
+  var eff2 Eff[None, int] = Provide(eff1, "hello")
 
   // Only immediate values (no unhandled requirements) can be evaled.
   if result, err := Eval(eff2); err == nil {
@@ -169,7 +169,7 @@ func TestProgram(t *testing.T) {
     var ability HttpAb = handler.Ability()
     var handled Eff[None, int] = Provide(program, ability)
     var (
-        result *HttpRs
+        result *int
         err    error
     )
     result, err = Eval(handled)
