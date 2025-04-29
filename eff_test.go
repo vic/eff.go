@@ -42,7 +42,7 @@ func dontPrintHandler() Handler[printRq, printRs, None] {
 func TestHandleSimple(t *testing.T) {
 	h := dontPrintHandler()
 	e := Console[None]{}.PrintLn("hello")
-	f := Handle(e, h)
+	f := Provide(e, h.Ability())
 	v, err := Eval(f)
 	if err != nil {
 		t.Error(err)

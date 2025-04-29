@@ -43,13 +43,13 @@ func right[A, B any](b *B) And[A, B] {
 	return func() (*A, *B) { return nil, b }
 }
 
+func both[N And[A, B], A, B any](n N) (*A, *B) {
+	return n()
+}
+
 func fst[A, B any](p And[A, B]) A {
 	a, _ := p()
 	return *a
-}
-func snd[A, B any](p And[A, B]) B {
-	_, b := p()
-	return *b
 }
 
 func AndNone[S, V any](e Eff[S, V]) Eff[And[S, None], V] {
@@ -138,47 +138,45 @@ func MapM[A, U, V any](e Eff[A, U], f func(U) Eff[A, V]) Eff[A, V] {
 }
 
 func FlatMap[A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V]) Eff[And[A, B], V] {
-	return cont(fst, func(u immediate[U]) Eff[And[A, B], V] {
+	return flatMap(e, f, both)
+}
+
+func flatMap[N, A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V], both func(N) (*A, *B)) Eff[N, V] {
+	fst := func(n N) A {
+		a, _ := both(n)
+		return *a
+	}
+	snd := func(n N) B {
+		_, b := both(n)
+		return *b
+	}
+	return cont(fst, func(u immediate[U]) Eff[N, V] {
 		v := f(*u)
-		return cont(snd, func(v immediate[V]) Eff[And[A, B], V] {
-			return Value[And[A, B]](v)
+		return cont(snd, func(v immediate[V]) Eff[N, V] {
+			return Value[N](v)
 		})(v)
 	})(e)
 }
 
 type Cont[S, O any] func(O) Eff[S, O]
 type Handler[I, O, S any] func(I, Cont[S, O]) Eff[S, O]
-type Ability[I, O, S any] = And[Handler[I, O, S], S]
+type Ability[I, O, S any] And[Handler[I, O, S], S]
 
-func Suspend[E Eff[Ability[I, O, S], O], I, O, S any](input I) E {
+func Suspend[E Eff[A, O], A Ability[I, O, S], I, O, S any](input I) E {
 	type H = Handler[I, O, S]
 	continuation := func(o O) Eff[S, O] {
 		return Value[S](&o)
 	}
-	eff := FlatMap(Ctx[H](), func(h H) Eff[S, O] {
+	eff := flatMap(Ctx[H](), func(h H) Eff[S, O] {
 		return h(input, continuation)
+	}, func(n A) (*Handler[I, O, S], *S) {
+		return n()
 	})
 	return E(eff)
 }
 
-func Handle[V, I, O, S any](e Eff[Ability[I, O, S], V], h Handler[I, O, S]) Eff[S, V] {
-	return ProvideLeft(e, h)
-}
-
-func HandleBoth[aI, aO, aS, bI, bO, bS any](
-	a Handler[aI, aO, aS],
-	b Handler[bI, bO, bS],
-	e Eff[
-		And[
-			Ability[aI, aO, aS],
-			Ability[bI, bO, bS],
-		],
-		bO,
-	],
-) Eff[bS, bO] {
-	x := ProvideLeft(e, left[aS](&a))
-	y := ProvideLeft(x, b)
-	return y
+func (h *Handler[I, O, S]) Ability() Ability[I, O, S] {
+	return Ability[I, O, S](left[S](h))
 }
 
 func Eval[V any](e Eff[None, V]) (*V, error) {
