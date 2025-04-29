@@ -19,10 +19,9 @@ func TestReadWrite(t *testing.T) {
 	st := &S{"hello"}
 	rh := ReadHandler(func() *S { return st })
 	wh := WriteHandler(func(s *S) { st = s })
-	e1 := eff.ProvideLeft(e, rh.Ability())
-	e2 := eff.Provide(e1, wh.Ability())
+	x := eff.ProvideBoth(e, rh.Ability(), wh.Ability())
 
-	_, err := eff.Eval(e2)
+	_, err := eff.Eval(x)
 	if err != nil {
 		t.Error(err)
 		return

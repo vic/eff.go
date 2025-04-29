@@ -141,13 +141,13 @@ func FlatMap[A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V]) Eff[And[A, B], V]
 	return flatMap(e, f, both)
 }
 
-func flatMap[N, A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V], both func(N) (*A, *B)) Eff[N, V] {
+func flatMap[N, A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V], pair func(N) (*A, *B)) Eff[N, V] {
 	fst := func(n N) A {
-		a, _ := both(n)
+		a, _ := pair(n)
 		return *a
 	}
 	snd := func(n N) B {
-		_, b := both(n)
+		_, b := pair(n)
 		return *b
 	}
 	return cont(fst, func(u immediate[U]) Eff[N, V] {
