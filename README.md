@@ -118,6 +118,8 @@ type HttpAb = Ability[HttpRq, HttpRs, Nil]
 
 // Produce an effect of fetching the given URL
 func Get(url string) Eff[HttpAb, HttpRs] {
+    // eff.Request takes an HttpRq and produces
+    // a suspended (delayed) computation of HttpRs
     return Request[Eff[HttpAb, HttpRs]](HttpRq(url))
 }
 
