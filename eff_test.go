@@ -11,12 +11,8 @@ type Person struct {
 func TestPure(t *testing.T) {
 	person := Person{}
 	e := Pure(&person)
-	found, err := Eval(e)
+	found := Eval(e)
 	person.name = "ulrika"
-	if err != nil {
-		t.Error(err)
-		return
-	}
 	if found.name != "ulrika" {
 		t.Errorf("not the person I want: %v", person)
 	}
@@ -43,11 +39,7 @@ func TestHandleSimple(t *testing.T) {
 	h := dontPrintHandler()
 	e := Console[Nil]{}.PrintLn("hello")
 	f := Provide(e, h.Ability())
-	v, err := Eval(f)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	v := Eval(f)
 	if int(*v) != len("hello") {
 		t.Errorf("unexpected value %v", *v)
 	}

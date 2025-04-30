@@ -73,14 +73,15 @@ An effect `Eff[S, V]` can be one of two possible values:
   // Our first effect program from a traditional function.
   var eff1 Eff[string, int] = Func(StringLength)
 
-  // Notice that the effect requirement dissapears
-  var eff2 Eff[Nil, int] = Provide(eff1, "hello")
+  var requirement string := "hello"
+  // Notice that the effect requirement is discharged
+  var eff2 Eff[Nil, int] = Provide(eff1, &requirement)
 
-  // Only immediate values (no unhandled requirements) can be evaled.
-  if result, err := Eval(eff2); err == nil {
-    // Dereference the immediate value.
-    *result == len("hello")
-  }
+  // Only effects depending on Nil can be evaled.
+  result := Eval(eff2)
+
+  // Dereference the immediate value.
+  *result == len("hello")
   ```
 
   Using `eff.Func(func (S) V)` you could lift a function into their effect type.
@@ -151,8 +152,9 @@ import (
 
 // A test handler for the HttpAb ability. mocks responses.
 // Notice this type has the same type parameters as HttpAb.
-type HttpTestHandler = Handler[HttpRq, HttpRs, Nil]
-func NewHttpTestHandler() HttpTestHandler {
+type HttpHandler = Handler[HttpRq, HttpRs, Nil]
+
+func HttpTestHandler() HttpHandler {
     // A handler is nothing more than a function that takes:
     // - the ability request (HttpRq)
     // - a continuation that will create an Eff[Nil, HttpRs].
@@ -167,17 +169,10 @@ func NewHttpTestHandler() HttpTestHandler {
 func TestProgram(t *testing.T) {
     // Explicit types are shown only for clarity
     var program Eff[HttpAb, int] = Program()
-    var handler HttpTestHandler = NewHttpTestHandler()
-    var ability HttpAb = handler.Ability()
+    var handler HttpHandler = HttpTestHandler()
+    var ability *HttpAb = handler.Ability()
     var handled Eff[Nil, int] = Provide(program, ability)
-    var (
-        result *int
-        err    error
-    )
-    result, err = Eval(handled)
-    if err != nil {
-        t.Error(err)
-    }
+    var result *int = Eval(handled)
     if *result != len("hello") {
         t.Error("unexpected result")
     }
@@ -187,7 +182,7 @@ func TestProgram(t *testing.T) {
 
 ### Combining Effects.
 
-> TODO: Map, MapM, FlatMap
+> TODO: ContraMap, Map, MapM, FlatMap
 
 ### Providing requirements.
 

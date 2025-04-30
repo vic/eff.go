@@ -1,9 +1,7 @@
 package eff
 
-import "fmt"
-
 type immediate[V any] *V
-type suspended[S, V any] func(S) Eff[S, V]
+type suspended[S, V any] func(*S) Eff[S, V]
 type Eff[S, V any] func() (immediate[V], suspended[S, V])
 
 type Nil *Nil
@@ -20,8 +18,8 @@ func Value[S, V any](v *V) Eff[S, V] {
 
 func Func[S, V any](f func(S) V) Eff[S, V] {
 	return func() (immediate[V], suspended[S, V]) {
-		return nil, func(s S) Eff[S, V] {
-			v := f(s)
+		return nil, func(s *S) Eff[S, V] {
+			v := f(*s)
 			return Value[S](&v)
 		}
 	}
@@ -47,58 +45,60 @@ func both[N And[A, B], A, B any](n N) (*A, *B) {
 	return n()
 }
 
-func fst[A, B any](p And[A, B]) A {
-	a, _ := p()
-	return *a
-}
-
 func AndNil[S, V any](e Eff[S, V]) Eff[And[S, Nil], V] {
+	fst := func(n *And[S, Nil]) *S {
+		a, _ := (*n)()
+		return a
+	}
 	return cont(fst, func(v immediate[V]) Eff[And[S, Nil], V] {
 		return Value[And[S, Nil]](v)
 	})(e)
 }
 
-func Provide[S, V any](e Eff[S, V], s S) Eff[Nil, V] {
+func Provide[S, V any](e Eff[S, V], s *S) Eff[Nil, V] {
 	return ProvideLeft(AndNil(e), s)
 }
 
-func ProvideBoth[A, B, V any](e Eff[And[A, B], V], a A, b B) Eff[Nil, V] {
+func ProvideBoth[A, B, V any](e Eff[And[A, B], V], a *A, b *B) Eff[Nil, V] {
 	return Provide(ProvideLeft(e, a), b)
 }
 
-func ProvideRight[A, B, V any](e Eff[And[A, B], V], b B) Eff[A, V] {
+func ProvideRight[A, B, V any](e Eff[And[A, B], V], b *B) Eff[A, V] {
 	return ProvideLeft(Rotate(e), b)
 }
 
-func ProvideLeft[A, B, V any](e Eff[And[A, B], V], a A) Eff[B, V] {
-	imm, sus := e()
-	if imm != nil {
-		return Value[B](imm)
-	}
-	e = sus(left[B](&a))
-	imm, sus = e()
-	if imm != nil {
-		return Value[B](imm)
-	}
+func ProvideLeft[A, B, V any](e Eff[And[A, B], V], a *A) Eff[B, V] {
 	return func() (immediate[V], suspended[B, V]) {
-		return nil, func(b B) Eff[B, V] {
-			e = sus(right[A](&b))
+		return nil, func(b *B) Eff[B, V] {
+			imm, sus := e()
+			if imm != nil {
+				return Value[B](imm)
+			}
+			n := left[B](a)
+			e = sus(&n)
+			imm, sus = e()
+			if imm != nil {
+				return Value[B](imm)
+			}
+			n = right[A](b)
+			e = sus(&n)
 			return ProvideLeft(e, a)
 		}
 	}
 }
 
 func Rotate[A, B, V any](e Eff[And[A, B], V]) Eff[And[B, A], V] {
-	rot := func(n And[B, A]) And[A, B] {
-		b, a := n()
-		return func() (*A, *B) { return a, b }
+	rot := func(n *And[B, A]) *And[A, B] {
+		b, a := (*n)()
+		var r And[A, B] = func() (*A, *B) { return a, b }
+		return &r
 	}
 	return cont(rot, func(v immediate[V]) Eff[And[B, A], V] {
 		return Value[And[B, A]](v)
 	})(e)
 }
 
-func cont[T, U, S, V any](f func(T) S, g func(immediate[V]) Eff[T, U]) func(Eff[S, V]) Eff[T, U] {
+func cont[T, U, S, V any](f func(*T) *S, g func(immediate[V]) Eff[T, U]) func(Eff[S, V]) Eff[T, U] {
 	return func(e Eff[S, V]) Eff[T, U] {
 		return func() (immediate[U], suspended[T, U]) {
 			immV, susV := e()
@@ -106,7 +106,7 @@ func cont[T, U, S, V any](f func(T) S, g func(immediate[V]) Eff[T, U]) func(Eff[
 				eff := g(immV)
 				return eff()
 			}
-			return nil, func(t T) Eff[T, U] {
+			return nil, func(t *T) Eff[T, U] {
 				s := f(t)
 				v := susV(s)
 				return cont(f, g)(v)
@@ -115,7 +115,7 @@ func cont[T, U, S, V any](f func(T) S, g func(immediate[V]) Eff[T, U]) func(Eff[
 	}
 }
 
-func ContraMap[I, O, V any](e Eff[O, V], f func(I) O) Eff[I, V] {
+func ContraMap[I, O, V any](e Eff[O, V], f func(*I) *O) Eff[I, V] {
 	return cont(f, func(v immediate[V]) Eff[I, V] {
 		return Value[I](v)
 	})(e)
@@ -129,9 +129,9 @@ func Map[U, S, V any](e Eff[S, V], f func(V) U) Eff[S, U] {
 }
 
 func MapM[A, U, V any](e Eff[A, U], f func(U) Eff[A, V]) Eff[A, V] {
-	return cont(Id[A], func(u immediate[U]) Eff[A, V] {
+	return cont(Id[*A], func(u immediate[U]) Eff[A, V] {
 		v := f(*u)
-		return cont(Id[A], func(v immediate[V]) Eff[A, V] {
+		return cont(Id[*A], func(v immediate[V]) Eff[A, V] {
 			return Value[A](v)
 		})(v)
 	})(e)
@@ -142,13 +142,13 @@ func FlatMap[A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V]) Eff[And[A, B], V]
 }
 
 func flatMap[N, A, U, B, V any](e Eff[A, U], f func(U) Eff[B, V], pair func(N) (*A, *B)) Eff[N, V] {
-	fst := func(n N) A {
-		a, _ := pair(n)
-		return *a
+	fst := func(n *N) *A {
+		a, _ := pair(*n)
+		return a
 	}
-	snd := func(n N) B {
-		_, b := pair(n)
-		return *b
+	snd := func(n *N) *B {
+		_, b := pair(*n)
+		return b
 	}
 	return cont(fst, func(u immediate[U]) Eff[N, V] {
 		v := f(*u)
@@ -175,14 +175,17 @@ func Request[E Eff[A, O], A Ability[I, O, S], I, O, S any](input I) E {
 	return E(eff)
 }
 
-func (h *Handler[I, O, S]) Ability() Ability[I, O, S] {
-	return Ability[I, O, S](left[S](h))
+func (h *Handler[I, O, S]) Ability() *Ability[I, O, S] {
+	ab := Ability[I, O, S](left[S](h))
+	return &ab
 }
 
-func Eval[V any](e Eff[Nil, V]) (*V, error) {
-	imm, _ := e()
-	if imm != nil {
-		return imm, nil
+func Eval[V any](e Eff[Nil, V]) *V {
+	for {
+		imm, sus := e()
+		if imm != nil {
+			return imm
+		}
+		e = sus(nil)
 	}
-	return nil, fmt.Errorf("unhandled eff of type %T", e)
 }

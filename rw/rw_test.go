@@ -10,7 +10,7 @@ import (
 func TestReadWrite(t *testing.T) {
 	type S []string
 
-	e := eff.FlatMap(Read[S](), func(s *S) WriteEff[S] {
+	e := eff.FlatMap(Read[S](), func(s *S) eff.Eff[WriteAb[S], WriteRs[S]] {
 		n := append(*s, "world")
 		e := Write(&n)
 		return e
@@ -21,11 +21,7 @@ func TestReadWrite(t *testing.T) {
 	wh := WriteHandler(func(s *S) { st = s })
 	x := eff.ProvideBoth(e, rh.Ability(), wh.Ability())
 
-	_, err := eff.Eval(x)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	eff.Eval(x)
 
 	s := strings.Join(*st, " ")
 	if s != "hello world" {
