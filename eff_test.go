@@ -29,7 +29,7 @@ type printAb[S any] = Ability[printRq, printRs, S]
 type printEff[S any] = Eff[printAb[S], printRs]
 
 func (c Console[S]) PrintLn(line string) printEff[S] {
-	return Suspend[printEff[S]](printRq(line))
+	return Request[printEff[S]](printRq(line))
 }
 
 func dontPrintHandler() Handler[printRq, printRs, Nil] {

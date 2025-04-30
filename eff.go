@@ -162,7 +162,7 @@ type Cont[S, O any] func(O) Eff[S, O]
 type Handler[I, O, S any] func(I, Cont[S, O]) Eff[S, O]
 type Ability[I, O, S any] And[Handler[I, O, S], S]
 
-func Suspend[E Eff[A, O], A Ability[I, O, S], I, O, S any](input I) E {
+func Request[E Eff[A, O], A Ability[I, O, S], I, O, S any](input I) E {
 	type H = Handler[I, O, S]
 	continuation := func(o O) Eff[S, O] {
 		return Value[S](&o)

@@ -118,7 +118,7 @@ type HttpAb = Ability[HttpRq, HttpRs, Nil]
 
 // Produce an effect of fetching the given URL
 func Get(url string) Eff[HttpAb, HttpRs] {
-    return Suspend[Eff[HttpAb, HttpRs]](HttpRq(url))
+    return Request[Eff[HttpAb, HttpRs]](HttpRq(url))
 }
 
 func BodyLength(r HttpRs) int {

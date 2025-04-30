@@ -16,11 +16,11 @@ type WriteAb[S any] = eff.Ability[WriteRq[S], WriteRs[S], eff.Nil]
 type WriteEff[S any] = eff.Eff[WriteAb[S], WriteRs[S]]
 
 func Read[S any]() ReadEff[S] {
-	return eff.Suspend[ReadEff[S]](ReadRq[S]{})
+	return eff.Request[ReadEff[S]](ReadRq[S]{})
 }
 
 func Write[S any](v *S) WriteEff[S] {
-	return eff.Suspend[WriteEff[S]](WriteRq[S](v))
+	return eff.Request[WriteEff[S]](WriteRq[S](v))
 }
 
 func ReadHandler[S any](r Reader[S]) eff.Handler[ReadRq[S], ReadRs[S], eff.Nil] {
