@@ -52,14 +52,14 @@ func fst[A, B any](p And[A, B]) A {
 	return *a
 }
 
-func AndNone[S, V any](e Eff[S, V]) Eff[And[S, Nil], V] {
+func AndNil[S, V any](e Eff[S, V]) Eff[And[S, Nil], V] {
 	return cont(fst, func(v immediate[V]) Eff[And[S, Nil], V] {
 		return Value[And[S, Nil]](v)
 	})(e)
 }
 
 func Provide[S, V any](e Eff[S, V], s S) Eff[Nil, V] {
-	return ProvideLeft(AndNone(e), s)
+	return ProvideLeft(AndNil(e), s)
 }
 
 func ProvideBoth[A, B, V any](e Eff[And[A, B], V], a A, b B) Eff[Nil, V] {
