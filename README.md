@@ -73,12 +73,12 @@ An effect `Eff[S, V]` can be one of two possible values:
   // Our first effect program from a traditional function.
   var eff1 Eff[string, int] = Func(StringLength)
 
-  var requirement string := "hello"
+  var requirement string = "hello"
   // Notice that the effect requirement is discharged
   var eff2 Eff[Nil, int] = Provide(eff1, &requirement)
 
   // Only effects depending on Nil can be evaled.
-  result := Eval(eff2)
+  var result *int = Eval(eff2)
 
   // Dereference the immediate value.
   *result == len("hello")
@@ -167,18 +167,25 @@ func HttpTestHandler() HttpHandler {
 }
 
 func TestProgram(t *testing.T) {
-    // Explicit types are shown only for clarity
     var program Eff[HttpAb, int] = Program()
     var handler HttpHandler = HttpTestHandler()
-    var ability *HttpAb = handler.Ability()
-    var handled Eff[Nil, int] = Provide(program, ability)
+    var handled Eff[Nil, int] = Provide(program, handler.Ability())
     var result *int = Eval(handled)
     if *result != len("hello") {
-        t.Error("unexpected result")
+        t.Errorf("unexpected result %v", *result)
     }
 }
 
 ```
+
+As you can notice, using `Provide(eff, ability)` discharges the requirement
+of ability on eff. However no computation happens on this step, the result
+is still another Effect (description of a program) but with less requirements.
+
+It is until we use `Eval(eff)` that computation actually happens.
+Eval can only take effects that depend on Nil, making sure that all ability
+requirements have been provided.
+
 
 ### Combining Effects.
 
