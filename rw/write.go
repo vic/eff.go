@@ -1,20 +1,23 @@
 package rw
 
-import "github.com/vic/eff.go"
+import (
+	fx "github.com/vic/eff.go"
+)
 
 type Writer[S any] func(*S)
 
-type WriteRq[S any] = *S
-type WriteRs[S any] struct{}
-type WriteAb[S any] = eff.Ability[WriteRq[S], WriteRs[S], eff.Nil]
+type writeRq[S any] = func(*S) fx.FxNil
+type writeHn[S any] = func(fx.Fx[fx.And[writeRq[S], fx.Nil], fx.Nil]) fx.FxNil
+type WriteAb[S any] = fx.And[writeHn[S], fx.Nil]
+type WriteFx[S any] = fx.Fx[WriteAb[S], fx.Nil]
 
-func Write[S any](v *S) eff.Eff[WriteAb[S], WriteRs[S]] {
-	return eff.Request[eff.Eff[WriteAb[S], WriteRs[S]]](WriteRq[S](v))
+func Write[S any](v *S) WriteFx[S] {
+	return fx.Request[writeHn[S]](v)
 }
 
-func WriteHandler[S any](w Writer[S]) eff.Handler[WriteRq[S], WriteRs[S], eff.Nil] {
-	return func(v WriteRq[S], f eff.Cont[eff.Nil, WriteRs[S]]) eff.Eff[eff.Nil, WriteRs[S]] {
-		w(v)
-		return f(WriteRs[S]{})
-	}
+func WriteHandler[S any](w Writer[S]) writeHn[S] {
+	return fx.Handler(func(s *S) fx.FxNil {
+		w(s)
+		return fx.PureNil
+	})
 }

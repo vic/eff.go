@@ -4,24 +4,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vic/eff.go"
+	fx "github.com/vic/eff.go"
 )
 
 func TestReadWrite(t *testing.T) {
 	type S []string
+	type E = fx.Fx[fx.And[ReadAb[S], WriteAb[S]], fx.Nil]
 
-	e := eff.FlatMap(Read[S](), func(s *S) eff.Eff[WriteAb[S], WriteRs[S]] {
+	var e E = fx.FlatMap(Read[S](), func(s *S) WriteFx[S] {
 		n := append(*s, "world")
-		e := Write(&n)
-		return e
+		return Write(&n)
 	})
 
 	st := &S{"hello"}
 	rh := ReadHandler(func() *S { return st })
 	wh := WriteHandler(func(s *S) { st = s })
-	x := eff.ProvideBoth(e, rh.Ability(), wh.Ability())
-
-	eff.Eval(x)
+	x := fx.AndCollapse(fx.ProvideAB(e, &rh, &wh))
+	fx.Eval(x)
 
 	s := strings.Join(*st, " ")
 	if s != "hello world" {

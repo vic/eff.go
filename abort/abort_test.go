@@ -3,15 +3,17 @@ package abort
 import (
 	"testing"
 
-	"github.com/vic/eff.go"
+	fx "github.com/vic/eff.go"
 )
 
 func TestSuccess(t *testing.T) {
+	type Ok = int
 	type Err = string
 	value := 22
-	e := eff.Value[AbortAb[Err, int]](&value)
-	x := HandleAbort(e)
-	var r *Result[Err, int] = eff.Eval(x)
+	e := Succeed[Err](22)
+	h := Handler[Ok, Err]()
+	x := fx.ProvideLeft(fx.Apply[AbortHn[Ok, Err]](e), &h)
+	var r *Result[Ok, Err] = fx.Eval(x)
 	val, err := (*r)()
 	if err != nil {
 		t.Error(*err)
@@ -22,13 +24,14 @@ func TestSuccess(t *testing.T) {
 }
 
 func TestFailure(t *testing.T) {
-	t.SkipNow()
+	type Ok = int
 	type Err = string
-	e := eff.Map(Abort[Err, int]("ahhhh"), func(_ Result[Err, int]) int {
-		panic("unreachable")
+	e := fx.Map(Abort[Ok]("ahhhh"), func(_ Ok) int {
+		panic("BUG: mapping on aborted eff should be unreachable")
 	})
-	x := HandleAbort(e)
-	var r *Result[Err, int] = eff.Eval(x)
+	h := Handler[Ok, Err]()
+	x := fx.ProvideLeft(fx.Apply[AbortHn[Ok, Err]](e), &h)
+	var r *Result[Ok, Err] = fx.Eval(x)
 	val, err := (*r)()
 	if *err != "ahhhh" {
 		t.Errorf("unexpected err %v", *err)
