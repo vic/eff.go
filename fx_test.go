@@ -18,6 +18,18 @@ func TestPure(t *testing.T) {
 	}
 }
 
+func TestFunc(t *testing.T) {
+	strLen := func(s string) int {
+		return len(s)
+	}
+	e := Func(strLen)
+	provided := Provide(e, "hello")
+	result := Eval(provided)
+	if result != len("hello") {
+		t.Errorf("unexpected result %v", result)
+	}
+}
+
 type printRq = func(string) FxPure[int]
 type printHn = func(Fx[And[printRq, Nil], int]) Fx[Nil, int]
 type printAb = And[printHn, Nil]
