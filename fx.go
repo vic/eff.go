@@ -49,8 +49,8 @@ func Halt[S, V any]() Fx[S, V] {
 	return nil
 }
 
-// Continues with y if x is already Halted. Otherwise x continues.
-func Restart[S, V any](x Fx[S, V], y func() Fx[S, V]) Fx[S, V] {
+// Replace x with y if x is already Halted. Otherwise x continues.
+func Replace[S, V any](x Fx[S, V], y func() Fx[S, V]) Fx[S, V] {
 	if x == nil {
 		return y()
 	}
@@ -60,7 +60,7 @@ func Restart[S, V any](x Fx[S, V], y func() Fx[S, V]) Fx[S, V] {
 	}
 	return func() (immediate[V], suspended[S, V]) {
 		return nil, func(s *S) Fx[S, V] {
-			return Restart(sus(s), y)
+			return Replace(sus(s), y)
 		}
 	}
 }
