@@ -16,6 +16,6 @@ func Read[T any]() ReadFx[T, *T] {
 func ReadHandler[T any](r Reader[T]) ReadHn[T] {
 	return fx.Handler(func(_ fx.Nil) fx.FxPure[*T] {
 		v := r()
-		return fx.Pure(&v)
+		return fx.Pure(v)
 	})
 }

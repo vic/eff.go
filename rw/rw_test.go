@@ -19,7 +19,7 @@ func TestReadWrite(t *testing.T) {
 	st := &S{"hello"}
 	rh := ReadHandler(func() *S { return st })
 	wh := WriteHandler(func(s *S) { st = s })
-	x := fx.AndCollapse(fx.ProvideAB(e, &rh, &wh))
+	x := fx.AndCollapse(fx.ProvideAB(e, rh, wh))
 	fx.Eval(x)
 
 	s := strings.Join(*st, " ")

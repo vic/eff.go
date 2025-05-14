@@ -12,9 +12,9 @@ func TestSuccess(t *testing.T) {
 	value := 22
 	e := Succeed[Err](22)
 	h := Handler[Ok, Err]()
-	x := fx.ProvideLeft(fx.Apply[AbortHn[Ok, Err]](e), &h)
-	var r *Result[Ok, Err] = fx.Eval(x)
-	val, err := (*r)()
+	x := fx.ProvideLeft(fx.Apply[AbortHn[Ok, Err]](e), h)
+	var r Result[Ok, Err] = fx.Eval(x)
+	val, err := r()
 	if err != nil {
 		t.Error(*err)
 	}
@@ -30,9 +30,9 @@ func TestFailure(t *testing.T) {
 		panic("BUG: mapping on aborted eff should be unreachable")
 	})
 	h := Handler[Ok, Err]()
-	x := fx.ProvideLeft(fx.Apply[AbortHn[Ok, Err]](e), &h)
-	var r *Result[Ok, Err] = fx.Eval(x)
-	val, err := (*r)()
+	x := fx.ProvideLeft(fx.Apply[AbortHn[Ok, Err]](e), h)
+	var r Result[Ok, Err] = fx.Eval(x)
+	val, err := r()
 	if *err != "ahhhh" {
 		t.Errorf("unexpected err %v", *err)
 	}

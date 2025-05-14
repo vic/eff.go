@@ -30,16 +30,16 @@ func PrintLn(line string) printFx {
 func dontPrintHandler() printHn {
 	return Handler(func(line string) FxPure[int] {
 		r := len(line)
-		return Pure(&r)
+		return Pure(r)
 	})
 }
 
 func TestHandleSimple(t *testing.T) {
 	e := PrintLn("hello")
 	h := dontPrintHandler()
-	f := ProvideLeft(e, &h)
+	f := ProvideLeft(e, h)
 	v := Eval(f)
-	if int(*v) != len("hello") {
-		t.Errorf("unexpected value %v", *v)
+	if v != len("hello") {
+		t.Errorf("unexpected value %v", v)
 	}
 }
