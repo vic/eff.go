@@ -43,18 +43,20 @@ func Halt[S, V any]() Fx[S, V] {
 	return nil
 }
 
-// Replace x with y if x is already Halted. Otherwise x continues.
-func Replace[S, V any](x Fx[S, V], y func() Fx[S, V]) Fx[S, V] {
-	if x == nil {
-		return y()
-	}
-	imm, sus := x()
-	if imm != nil {
-		return value[S](imm())
-	}
-	return func() (immediate[V], suspended[S, V]) {
-		return nil, func(s S) Fx[S, V] {
-			return Replace(sus(s), y)
+// Replace with y if x is already Halted. Otherwise x continues.
+func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
+	return func(x Fx[S, V]) Fx[S, V] {
+		if x == nil {
+			return y()
+		}
+		imm, sus := x()
+		if imm != nil {
+			return value[S](imm())
+		}
+		return func() (immediate[V], suspended[S, V]) {
+			return nil, func(s S) Fx[S, V] {
+				return Replace(y)(sus(s))
+			}
 		}
 	}
 }

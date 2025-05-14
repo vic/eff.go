@@ -31,6 +31,6 @@ func Handler[V, E any]() AbortHn[V, E] {
 		})
 		succeeded := fx.Map(handler(eff), success[V, E])
 		failed := func() fx.FxPure[Result[V, E]] { return fx.Pure(err) }
-		return fx.Replace(succeeded, failed)
+		return fx.Replace(failed)(succeeded)
 	}
 }
