@@ -3,7 +3,7 @@ package abort
 import (
 	"testing"
 
-	fx "github.com/vic/eff.go"
+	fx "github.com/vic/fx.go"
 )
 
 func TestSuccess(t *testing.T) {

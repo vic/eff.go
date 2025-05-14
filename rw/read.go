@@ -1,20 +1,20 @@
 package rw
 
-import fx "github.com/vic/eff.go"
+import fx "github.com/vic/fx.go"
 
-type Reader[S any] func() *S
+type Reader[T any] func() *T
 
-type readRq[S any] = func(fx.Nil) fx.FxPure[*S]
-type readHn[S any] = func(fx.Fx[fx.And[readRq[S], fx.Nil], *S]) fx.FxPure[*S]
-type ReadAb[S any] = fx.And[readHn[S], fx.Nil]
-type ReadFx[S any] = fx.Fx[ReadAb[S], *S]
+type ReadFn[T any] = func(fx.Nil) fx.FxPure[*T]
+type ReadHn[T any] = func(fx.Fx[fx.And[ReadFn[T], fx.Nil], *T]) fx.FxPure[*T]
+type ReadAb[T any] = fx.And[ReadHn[T], fx.Nil]
+type ReadFx[T, V any] = fx.Fx[ReadAb[T], V]
 
-func Read[S any]() ReadFx[S] {
-	return fx.Request[readHn[S]](fx.PNil)
+func Read[T any]() ReadFx[T, *T] {
+	return fx.Request[ReadHn[T]](fx.PNil)
 }
 
-func ReadHandler[S any](r Reader[S]) readHn[S] {
-	return fx.Handler(func(_ fx.Nil) fx.FxPure[*S] {
+func ReadHandler[T any](r Reader[T]) ReadHn[T] {
+	return fx.Handler(func(_ fx.Nil) fx.FxPure[*T] {
 		v := r()
 		return fx.Pure(&v)
 	})

@@ -1,23 +1,23 @@
 package rw
 
 import (
-	fx "github.com/vic/eff.go"
+	fx "github.com/vic/fx.go"
 )
 
-type Writer[S any] func(*S)
+type Writer[T any] func(*T)
 
-type writeRq[S any] = func(*S) fx.FxNil
-type writeHn[S any] = func(fx.Fx[fx.And[writeRq[S], fx.Nil], fx.Nil]) fx.FxNil
-type WriteAb[S any] = fx.And[writeHn[S], fx.Nil]
-type WriteFx[S any] = fx.Fx[WriteAb[S], fx.Nil]
+type WriteFn[T any] = func(*T) fx.FxNil
+type WriteHn[T any] = func(fx.Fx[fx.And[WriteFn[T], fx.Nil], fx.Nil]) fx.FxNil
+type WriteAb[T any] = fx.And[WriteHn[T], fx.Nil]
+type WriteFx[T, V any] = fx.Fx[WriteAb[T], V]
 
-func Write[S any](v *S) WriteFx[S] {
-	return fx.Request[writeHn[S]](v)
+func Write[T any](v *T) WriteFx[T, fx.Nil] {
+	return fx.Request[WriteHn[T]](v)
 }
 
-func WriteHandler[S any](w Writer[S]) writeHn[S] {
-	return fx.Handler(func(s *S) fx.FxNil {
-		w(s)
+func WriteHandler[T any](w Writer[T]) WriteHn[T] {
+	return fx.Handler(func(t *T) fx.FxNil {
+		w(t)
 		return fx.PureNil
 	})
 }
