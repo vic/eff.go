@@ -1,6 +1,7 @@
 package fx
 
 import (
+	"strconv"
 	"testing"
 )
 
@@ -43,28 +44,21 @@ func TestApply(t *testing.T) {
 	}
 }
 
-type printRq = func(string) FxPure[int]
-type printHn = func(Fx[And[printRq, Nil], int]) Fx[Nil, int]
-type printAb = And[printHn, Nil]
-type printFx = Fx[printAb, int]
+type printFn = func(string) FxPure[int]
 
-func PrintLn(line string) printFx {
-	return Request[printHn](line)
+func PrintLn(line string) Fx[And[printFn, Nil], int] {
+	return Handle[printFn](line)
 }
 
-func dontPrintHandler() printHn {
-	return Handler(func(line string) FxPure[int] {
-		r := len(line)
-		return Pure(r)
-	})
+func printLn(line string) FxPure[int] {
+	return Pure(len(line))
 }
 
 func TestHandleSimple(t *testing.T) {
-	e := PrintLn("hello")
-	h := dontPrintHandler()
-	f := ProvideLeft(e, h)
-	v := Eval(f)
-	if v != len("hello") {
+	e := Map(PrintLn("hello"), strconv.Itoa)
+	f := ProvideLeft(e, printLn)
+	var v string = Eval(f)
+	if v != strconv.Itoa(len("hello")) {
 		t.Errorf("unexpected value %v", v)
 	}
 }

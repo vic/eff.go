@@ -236,20 +236,20 @@ func Apply[F ~func(I) O, I, O any](i I) Fx[F, O] {
 	return Map(Ctx[F](), func(f F) O { return f(i) })
 }
 
-func Suspend[A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[A, B], O] {
-	return FlatMap(Ctx[A](), func(a A) Fx[B, O] { return a(i) })
+func Const[S, V any](v V) Fx[S, V] {
+	return Map(Ctx[S](), func(_ S) V { return v })
+}
+
+func Handle[A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[A, B], O] {
+	return AndJoin(Apply[A](i))
 }
 
 func Handler[A ~func(I) Fx[B, O], B, I, O any](a A) func(Fx[And[A, B], O]) Fx[B, O] {
 	return func(e Fx[And[A, B], O]) Fx[B, O] { return ProvideLeft(e, a) }
 }
 
-func Handle[F ~func(Fx[A, U]) Fx[B, V], A, B, U, V any](e Fx[A, U]) Fx[And[F, B], V] {
-	return FlatMap(Ctx[F](), func(f F) Fx[B, V] { return f(e) })
-}
-
-func Request[F ~func(Fx[And[A, B], O]) Fx[B, O], A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[F, B], O] {
-	return Handle[F](Suspend[A](i))
+func Suspend[F ~func(Fx[And[A, B], O]) Fx[B, O], A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[F, B], O] {
+	return Handle[F](Handle[A](i))
 }
 
 func Eval[V any](e Fx[Nil, V]) V {

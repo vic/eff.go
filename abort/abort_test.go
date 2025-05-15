@@ -11,8 +11,7 @@ func TestSuccess(t *testing.T) {
 	type Err = string
 	value := 22
 	e := Succeed[Err](22)
-	h := Handler[Ok, Err]()
-	x := fx.ProvideLeft(fx.Handle[AbortHn[Ok, Err]](e), h)
+	x := fx.ProvideLeft(AbortResult(e), AbortHandler[Ok, Err])
 	var r Result[Ok, Err] = fx.Eval(x)
 	val, err := r()
 	if err != nil {
@@ -29,8 +28,7 @@ func TestFailure(t *testing.T) {
 	e := fx.Map(Abort[Ok]("ahhhh"), func(_ Ok) int {
 		panic("BUG: mapping on aborted eff should be unreachable")
 	})
-	h := Handler[Ok, Err]()
-	x := fx.ProvideLeft(fx.Handle[AbortHn[Ok, Err]](e), h)
+	x := fx.ProvideLeft(AbortResult(e), AbortHandler[Ok, Err])
 	var r Result[Ok, Err] = fx.Eval(x)
 	val, err := r()
 	if *err != "ahhhh" {
