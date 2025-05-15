@@ -232,6 +232,10 @@ func ProvideLeft[A, B, V any](e Fx[And[A, B], V], a A) Fx[B, V] {
 	}
 }
 
+func Apply[F ~func(I) O, I, O any](i I) Fx[F, O] {
+	return Map(Ctx[F](), func(f F) O { return f(i) })
+}
+
 func Suspend[A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[A, B], O] {
 	return FlatMap(Ctx[A](), func(a A) Fx[B, O] { return a(i) })
 }

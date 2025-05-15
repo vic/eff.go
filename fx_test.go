@@ -30,6 +30,19 @@ func TestFunc(t *testing.T) {
 	}
 }
 
+func TestApply(t *testing.T) {
+	type F = func(string) int
+	var strLen F = func(s string) int {
+		return len(s)
+	}
+	var e Fx[F, int] = Apply[F]("hello")
+	provided := Provide(e, strLen)
+	result := Eval(provided)
+	if result != len("hello") {
+		t.Errorf("invalid result %v", result)
+	}
+}
+
 type printRq = func(string) FxPure[int]
 type printHn = func(Fx[And[printRq, Nil], int]) Fx[Nil, int]
 type printAb = And[printHn, Nil]
