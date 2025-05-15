@@ -11,6 +11,7 @@ func TestSuccess(t *testing.T) {
 	type Err = string
 	value := 22
 	e := Succeed[Err](22)
+	// Applying the handler directly
 	x := AbortHandler(e)
 	var r Result[Ok, Err] = fx.Eval(x)
 	val, err := r()
@@ -28,7 +29,8 @@ func TestFailure(t *testing.T) {
 	e := fx.Map(Abort[Ok]("ahhhh"), func(_ Ok) int {
 		panic("BUG: mapping on aborted eff should be unreachable")
 	})
-	x := AbortHandler(e)
+	// Another way of applying the abort handler.
+	x := fx.ProvideLeft(fx.Handle[ResultHn[Ok, Err]](e), AbortHandler[Ok, Err])
 	var r Result[Ok, Err] = fx.Eval(x)
 	val, err := r()
 	if *err != "ahhhh" {

@@ -7,6 +7,8 @@ type Result[V, E any] func() (*V, *E)
 func success[V, E any](v V) Result[V, E] { return func() (*V, *E) { return &v, nil } }
 func failure[V, E any](e E) Result[V, E] { return func() (*V, *E) { return nil, &e } }
 
+type ResultHn[V, E any] = func(AbortFx[E, V]) fx.FxPure[Result[V, E]]
+
 func AbortHandler[V, E any](e AbortFx[E, V]) fx.FxPure[Result[V, E]] {
 	var err Result[V, E]
 	var abortFn AbortFn[E] = func(e E) fx.FxNil {
