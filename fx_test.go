@@ -47,7 +47,7 @@ func TestApply(t *testing.T) {
 type printFn = func(string) FxPure[int]
 
 func PrintLn(line string) Fx[And[printFn, Nil], int] {
-	return Handle[printFn](line)
+	return Suspend[printFn](line)
 }
 
 func printLn(line string) FxPure[int] {

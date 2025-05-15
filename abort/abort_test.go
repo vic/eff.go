@@ -30,7 +30,7 @@ func TestFailure(t *testing.T) {
 		panic("BUG: mapping on aborted eff should be unreachable")
 	})
 	// Another way of applying the abort handler.
-	x := fx.ProvideLeft(fx.Handle[ResultHn[Ok, Err]](e), AbortHandler[Ok, Err])
+	x := fx.ProvideLeft(fx.Suspend[ResultHn[Ok, Err]](e), AbortHandler[Ok, Err])
 	var r Result[Ok, Err] = fx.Eval(x)
 	val, err := r()
 	if *err != "ahhhh" {

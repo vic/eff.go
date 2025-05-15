@@ -17,7 +17,7 @@ Some people also use the *recipe* analogy for effects: you first have a precise 
 
 ## Abilities
 
-In `Fx[S, V]`, `S` is said to be the *Ability* (sometimes also referred as the _set_ of *Abilities*, *Capabilities* or *Requirements*) that are needed for computing `V`.
+In `Fx[S, V]`, `S` is said to be the *Ability* (sometimes also referred as the _set_ of *Abilities*, *Capabilities*, *Effect Environment* or *Effect Requirements*) that are needed for computing `V`.
 
 Abilities describe the external resources that would be needed, as well as the _side-effects_ that are possible while computing `V`.
 
@@ -35,6 +35,6 @@ Examples of such Abilities are:
 
 A *Handler* for the `S` ability is a particular _interpretation_ of what `S` means.
 
-It is the Handler of `S` the only _side-effectful_ portion of your programs. It is possible and quite common to have different handlers (interpretations) for the same Ability, and each Handler  decides _how/when_ to perform world-modifying _side-effects_.
+Handlers are the only _side-effectful_ portion of your programs. It is possible, and quite common, to have different handlers (interpretations) for the same Ability, and each Handler  decides _how/when_ to perform world-modifying _side-effects_.
 
 For example, for an _http-request_ ability you can have a *test-handler* that just mock responses to fixed values so that you can easily assert on known values on your tests. You could also have a *live-handler* that actually performs requests via the network for production runs.

@@ -14,13 +14,7 @@ var PNil Nil = Nil(pnil{})
 var PureNil FxNil = Pure(PNil)
 
 func Pure[V any](v V) FxPure[V] {
-	return value[Nil](v)
-}
-
-func value[S, V any](v V) Fx[S, V] {
-	return func() (immediate[V], suspended[S, V]) {
-		return func() V { return v }, nil
-	}
+	return Const[Nil](v)
 }
 
 func Func[S, V any](f func(S) V) Fx[S, V] {
@@ -51,7 +45,7 @@ func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
 		}
 		imm, sus := x()
 		if imm != nil {
-			return value[S](imm())
+			return Const[S](imm())
 		}
 		return func() (immediate[V], suspended[S, V]) {
 			return nil, func(s S) Fx[S, V] {
@@ -87,7 +81,7 @@ func ContraMap[V, S, R any](f func(R) S) func(Fx[S, V]) Fx[R, V] {
 		}
 		imm, sus := e()
 		if imm != nil {
-			return value[R](imm())
+			return Const[R](imm())
 		}
 		return func() (immediate[V], suspended[R, V]) {
 			return nil, func(r R) Fx[R, V] {
@@ -103,7 +97,7 @@ func MapM[S, U, V any](f func(U) Fx[S, V]) func(Fx[S, U]) Fx[S, V] {
 	return cont(id, func(u immediate[U]) Fx[S, V] {
 		v := f(u())
 		return cont(id, func(v immediate[V]) Fx[S, V] {
-			return value[S](v())
+			return Const[S](v())
 		})(v)
 	})
 }
@@ -111,7 +105,7 @@ func MapM[S, U, V any](f func(U) Fx[S, V]) func(Fx[S, U]) Fx[S, V] {
 func MapT[S, V, U any](f func(V) U) func(Fx[S, V]) Fx[S, U] {
 	return MapM(func(v V) Fx[S, U] {
 		u := f(v)
-		return value[S](u)
+		return Const[S](u)
 	})
 }
 
@@ -134,7 +128,7 @@ func FlatMapT[A, U, B, V any](f func(U) Fx[B, V]) func(Fx[A, U]) Fx[And[A, B], V
 	}
 	return cont(a, func(u immediate[U]) Fx[And[A, B], V] {
 		return cont(b, func(v immediate[V]) Fx[And[A, B], V] {
-			return value[And[A, B]](v())
+			return Const[And[A, B]](v())
 		})(f(u()))
 	})
 }
@@ -145,7 +139,7 @@ func AndNil[S, V any](e Fx[S, V]) Fx[And[S, Nil], V] {
 		return s
 	}
 	return cont(fst, func(v immediate[V]) Fx[And[S, Nil], V] {
-		return value[And[S, Nil]](v())
+		return Const[And[S, Nil]](v())
 	})(e)
 }
 
@@ -158,7 +152,7 @@ func AndSwap[A, B, V any](e Fx[And[A, B], V]) Fx[And[B, A], V] {
 		return ab
 	}
 	return cont(swp, func(v immediate[V]) Fx[And[B, A], V] {
-		return value[And[B, A]](v())
+		return Const[And[B, A]](v())
 	})(e)
 }
 
@@ -170,7 +164,7 @@ func AndDisjoin[A, B, V any](e Fx[And[A, B], V]) Fx[A, Fx[B, V]] {
 	return func() (immediate[Fx[B, V]], suspended[A, Fx[B, V]]) {
 		return nil, func(a A) Fx[A, Fx[B, V]] {
 			x := ProvideLeft(e, a)
-			return value[A](x)
+			return Const[A](x)
 		}
 	}
 }
@@ -183,16 +177,16 @@ func AndCollapse[A, V any](e Fx[And[A, A], V]) Fx[A, V] {
 	}
 }
 
-func ProvideA[A, B, C, V any](e Fx[And[And[A, C], B], V], a A) Fx[And[C, B], V] {
+func ProvideFirstLeft[A, B, C, V any](e Fx[And[And[A, C], B], V], a A) Fx[And[C, B], V] {
 	return AndJoin(ProvideLeft(AndDisjoin(e), a))
 }
 
-func ProvideB[A, B, D, V any](e Fx[And[A, And[B, D]], V], b B) Fx[And[A, D], V] {
-	return AndSwap(ProvideA(AndSwap(e), b))
+func ProvideFirstRight[A, B, D, V any](e Fx[And[A, And[B, D]], V], b B) Fx[And[A, D], V] {
+	return AndSwap(ProvideFirstLeft(AndSwap(e), b))
 }
 
-func ProvideAB[A, B, C, D, V any](e Fx[And[And[A, C], And[B, D]], V], a A, b B) Fx[And[C, D], V] {
-	return ProvideB(ProvideA(e, a), b)
+func ProvideFirsts[A, B, C, D, V any](e Fx[And[And[A, C], And[B, D]], V], a A, b B) Fx[And[C, D], V] {
+	return ProvideFirstRight(ProvideFirstLeft(e, a), b)
 }
 
 func Provide[S, V any](e Fx[S, V], s S) Fx[Nil, V] {
@@ -213,7 +207,7 @@ func ProvideLeft[A, B, V any](e Fx[And[A, B], V], a A) Fx[B, V] {
 	}
 	imm, sus := e()
 	if imm != nil {
-		return value[B](imm())
+		return Const[B](imm())
 	}
 	return func() (immediate[V], suspended[B, V]) {
 		return nil, func(b B) Fx[B, V] {
@@ -225,7 +219,7 @@ func ProvideLeft[A, B, V any](e Fx[And[A, B], V], a A) Fx[B, V] {
 				}
 				imm, sus = e()
 				if imm != nil {
-					return value[B](imm())
+					return Const[B](imm())
 				}
 			}
 		}
@@ -237,10 +231,12 @@ func Apply[F ~func(I) O, I, O any](i I) Fx[F, O] {
 }
 
 func Const[S, V any](v V) Fx[S, V] {
-	return Map(Ctx[S](), func(_ S) V { return v })
+	return func() (immediate[V], suspended[S, V]) {
+		return func() V { return v }, nil
+	}
 }
 
-func Handle[A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[A, B], O] {
+func Suspend[A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[A, B], O] {
 	return AndJoin(Apply[A](i))
 }
 
@@ -248,8 +244,8 @@ func Handler[A ~func(I) Fx[B, O], B, I, O any](a A) func(Fx[And[A, B], O]) Fx[B,
 	return func(e Fx[And[A, B], O]) Fx[B, O] { return ProvideLeft(e, a) }
 }
 
-func Suspend[F ~func(Fx[And[A, B], O]) Fx[B, O], A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[F, B], O] {
-	return Handle[F](Handle[A](i))
+func Handle[F ~func(Fx[And[A, B], O]) Fx[B, O], A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[F, B], O] {
+	return Suspend[F](Suspend[A](i))
 }
 
 func Eval[V any](e Fx[Nil, V]) V {

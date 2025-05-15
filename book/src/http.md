@@ -20,17 +20,17 @@ type HttpRq string
 // For simplicity out response is just an string: The response body.
 type HttpRs string
 
-// Type of the request-effect function. This will be implemented
-// by some handler to provide actual responses.
+// Type of the effect-request function. 
+// This will be implemented by some handler to provide actual responses.
 //
 // fx.Nil in the result type indicates that our Http ability does
 // not requires any other ability.
-type HttpFn = func(HttpRq) fx.Fx[fx.Nil, HttpRs]
+type HttpFn func(HttpRq) fx.Fx[fx.Nil, HttpRs]
 
-// Type of the Handler (effect transformer) that handles requests.
+// Type of the Http Handler that discharges effect requirements
 type HttpHn = func(fx.Fx[fx.And[HttpFn, fx.Nil], HttpRs]) fx.Fx[fx.Nil, HttpRs]
 
-// Type of an effect ability (requires the handler) and additional abilities.
+// Type of the Http Ability: the handler and aditional abilities.
 type HttpAb = fx.And[HttpHn, fx.Nil]
 
 // An http effect that produces V
@@ -38,8 +38,7 @@ type HttpFx[V any] = fx.Fx[HttpAb, V]
 
 // An effect of HTTP GET requests.
 func Get(url HttpRq) HttpFx[HttpRs] {
-	// Request[HttpHn](input) is the same as Apply[HttpHn](Suspend[HttpFn](input))
-	return fx.Request[HttpHn](url)
+	return fx.Handle[HttpHn](url)
 }
 
 // A program that computes the respose length of https://example.org
@@ -50,14 +49,14 @@ func Program() HttpFx[int] {
 }
 
 func TestProgram(t *testing.T) {
-	httpHandler := fx.Handler(func(r HttpRq) fx.Fx[fx.Nil, HttpRs] {
+	var httpHandler HttpHn = fx.Handler(func(r HttpRq) fx.Fx[fx.Nil, HttpRs] {
 		mock := HttpRs("example")
 		return fx.Pure(&mock)
 	})
-	var provided fx.Fx[fx.Nil, int] = fx.ProvideLeft(Program(), &httpHandler)
-	var result *int = fx.Eval(provided)
-	if *result != len("example") {
-		t.Errorf("Unexpected result %v", *result)
+	var provided fx.Fx[fx.Nil, int] = fx.ProvideLeft(Program(), httpHandler)
+	var result int = fx.Eval(provided)
+	if result != len("example") {
+		t.Errorf("Unexpected result %v", result)
 	}
 }
 
