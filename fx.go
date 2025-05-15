@@ -240,12 +240,12 @@ func Handler[A ~func(I) Fx[B, O], B, I, O any](a A) func(Fx[And[A, B], O]) Fx[B,
 	return func(e Fx[And[A, B], O]) Fx[B, O] { return ProvideLeft(e, a) }
 }
 
-func Apply[F ~func(Fx[A, U]) Fx[B, V], A, B, U, V any](e Fx[A, U]) Fx[And[F, B], V] {
+func Handle[F ~func(Fx[A, U]) Fx[B, V], A, B, U, V any](e Fx[A, U]) Fx[And[F, B], V] {
 	return FlatMap(Ctx[F](), func(f F) Fx[B, V] { return f(e) })
 }
 
 func Request[F ~func(Fx[And[A, B], O]) Fx[B, O], A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[F, B], O] {
-	return Apply[F](Suspend[A](i))
+	return Handle[F](Suspend[A](i))
 }
 
 func Eval[V any](e Fx[Nil, V]) V {
