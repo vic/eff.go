@@ -4,11 +4,6 @@ type immediate[V any] func() V
 type suspended[S, V any] func(S) Fx[S, V]
 type Fx[S, V any] func() (immediate[V], suspended[S, V])
 
-// An Effect Transformation.
-// In general anything that transforms an effect type into another effect type
-// can be used as a Handler.
-type FT[R, U, S, V any] = func(Fx[R, U]) Fx[S, V]
-
 type FxPure[V any] = Fx[Nil, V]
 type FxNil = FxPure[Nil]
 
@@ -49,7 +44,7 @@ func Halt[S, V any]() Fx[S, V] {
 }
 
 // Replace with y if x is already Halted. Otherwise x continues.
-func Replace[S, V any](y func() Fx[S, V]) FT[S, V, S, V] {
+func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
 	return func(x Fx[S, V]) Fx[S, V] {
 		if x == nil {
 			return y()
@@ -66,7 +61,7 @@ func Replace[S, V any](y func() Fx[S, V]) FT[S, V, S, V] {
 	}
 }
 
-func cont[T, U, S, V any](r func(T) S, f func(immediate[V]) Fx[T, U]) FT[S, V, T, U] {
+func cont[T, U, S, V any](r func(T) S, f func(immediate[V]) Fx[T, U]) func(Fx[S, V]) Fx[T, U] {
 	return func(e Fx[S, V]) Fx[T, U] {
 		if e == nil {
 			return nil
@@ -85,7 +80,7 @@ func cont[T, U, S, V any](r func(T) S, f func(immediate[V]) Fx[T, U]) FT[S, V, T
 
 type And[A, B any] func() (A, B)
 
-func ContraMap[V, S, R any](f func(R) S) FT[S, V, R, V] {
+func ContraMap[V, S, R any](f func(R) S) func(Fx[S, V]) Fx[R, V] {
 	return func(e Fx[S, V]) Fx[R, V] {
 		if e == nil {
 			return nil
@@ -103,7 +98,7 @@ func ContraMap[V, S, R any](f func(R) S) FT[S, V, R, V] {
 	}
 }
 
-func MapM[S, U, V any](f func(U) Fx[S, V]) FT[S, U, S, V] {
+func MapM[S, U, V any](f func(U) Fx[S, V]) func(Fx[S, U]) Fx[S, V] {
 	id := func(s S) S { return s }
 	return cont(id, func(u immediate[U]) Fx[S, V] {
 		v := f(u())
@@ -113,7 +108,7 @@ func MapM[S, U, V any](f func(U) Fx[S, V]) FT[S, U, S, V] {
 	})
 }
 
-func MapT[S, V, U any](f func(V) U) FT[S, V, S, U] {
+func MapT[S, V, U any](f func(V) U) func(Fx[S, V]) Fx[S, U] {
 	return MapM(func(v V) Fx[S, U] {
 		u := f(v)
 		return value[S](u)
@@ -128,7 +123,7 @@ func FlatMap[A, U, B, V any](e Fx[A, U], f func(U) Fx[B, V]) Fx[And[A, B], V] {
 	return FlatMapT[A](f)(e)
 }
 
-func FlatMapT[A, U, B, V any](f func(U) Fx[B, V]) FT[A, U, And[A, B], V] {
+func FlatMapT[A, U, B, V any](f func(U) Fx[B, V]) func(Fx[A, U]) Fx[And[A, B], V] {
 	a := func(ab And[A, B]) A {
 		a, _ := ab()
 		return a
