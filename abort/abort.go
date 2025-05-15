@@ -8,7 +8,7 @@ type AbortFx[E, V any] = fx.Fx[AbortAb[E], V]
 
 func Abort[V, E any](e E) AbortFx[E, V] {
 	return fx.Map(fx.Handle[AbortFn[E]](e), func(_ fx.Nil) V {
-		panic("BUG: unreachable after aborted effect")
+		panic("unhandled abort effect")
 	})
 }
 
