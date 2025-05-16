@@ -52,17 +52,17 @@ func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
 }
 
 // Continue an effect by transforming its immediate value into another effect.
-func Cont[T, U, S, V any](cmap func(T) S, fmap func(V) Fx[T, U]) func(Fx[S, V]) Fx[T, U] {
+func Then[T, U, S, V any](cmap func(T) S, fmap func(V) Fx[T, U]) func(Fx[S, V]) Fx[T, U] {
 	return func(e Fx[S, V]) Fx[T, U] {
 		if e.stp != nil {
 			return Stop(func() Fx[T, U] {
-				return Cont(cmap, fmap)(e.stp())
+				return Then(cmap, fmap)(e.stp())
 			})
 		}
 		if e.imm != nil {
 			return fmap(e.imm())
 		}
-		return Pending(func(t T) Fx[T, U] { return Cont(cmap, fmap)(e.sus(cmap(t))) })
+		return Pending(func(t T) Fx[T, U] { return Then(cmap, fmap)(e.sus(cmap(t))) })
 	}
 }
 
@@ -123,15 +123,15 @@ func FlatMapH[A, U, B, V any](f func(U) Fx[B, V]) func(Fx[A, U]) Fx[And[A, B], V
 }
 
 func FlatCont[N, A, U, B, V any](amap func(N) A, bmap func(N) B, fmap func(U) Fx[B, V]) func(Fx[A, U]) Fx[N, V] {
-	return Cont(amap, func(u U) Fx[N, V] { return Cont(bmap, Const[N, V])(fmap(u)) })
+	return Then(amap, func(u U) Fx[N, V] { return Then(bmap, Const[N, V])(fmap(u)) })
 }
 
 func AndNil[S, V any](e Fx[S, V]) Fx[And[S, Nil], V] {
-	return Cont[And[S, Nil], V](left, Const)(e)
+	return Then[And[S, Nil], V](left, Const)(e)
 }
 
 func AndSwap[A, B, V any](e Fx[And[A, B], V]) Fx[And[B, A], V] {
-	return Cont[And[B, A], V](swap[B, A], Const)(e)
+	return Then[And[B, A], V](swap[B, A], Const)(e)
 }
 
 func AndJoin[A, B, V any](e Fx[A, Fx[B, V]]) Fx[And[A, B], V] {
