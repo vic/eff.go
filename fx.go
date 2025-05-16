@@ -32,7 +32,12 @@ func Func[S, V any](f func(S) V) Fx[S, V] {
 
 func Ctx[V any]() Fx[V, V] { return Func(identity[V]) }
 
-// An stopped effect that panics if resumed
+// An stopped effect that panics if resumed.
+// Only useful with Replace.
+//
+// For example, an Abort effect halts since it has no possible value for V
+// but then its Handler can Replace the halted effect with an Error value.
+// See: abort/result.go
 func Halt[S, V any]() Fx[S, V] {
 	return Stop(func() Fx[S, V] {
 		return Fx[S, V]{
@@ -53,7 +58,10 @@ func Resume[S, V any](e Fx[S, V]) Fx[S, V] {
 	if e.res != nil {
 		return e.res()
 	}
-	return e
+	if e.imm != nil {
+		return Const[S](e.imm())
+	}
+	return Pending(func(s S) Fx[S, V] { return Resume(e.sus(s)) })
 }
 
 // Replace with y if x is already Halted. Otherwise x continues.
@@ -232,7 +240,7 @@ func Handle[F ~func(Fx[And[A, B], O]) Fx[B, O], A ~func(I) Fx[B, O], B, I, O any
 func Eval[V any](e Fx[Nil, V]) V {
 	for {
 		if e.res != nil {
-			panic("tried to evaluate halted effect. try using fx.Replace with another effect.")
+			panic("tried to evaluate an stopped effect. try using fx.Resume or fx.Replace on it.")
 		}
 		if e.imm != nil {
 			return e.imm()
