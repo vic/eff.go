@@ -3,7 +3,7 @@ package fx
 type Fx[S, V any] struct {
 	imm func() V
 	sus func(S) Fx[S, V]
-	hlt func()
+	stp func()
 }
 
 type FxPure[V any] = Fx[Nil, V]
@@ -29,13 +29,12 @@ func Func[S, V any](f func(S) V) Fx[S, V] {
 
 func Ctx[V any]() Fx[V, V] { return Func(identity[V]) }
 
-// An effect that will never be continued.
-func Halt[S, V any]() Fx[S, V] { return Fx[S, V]{hlt: func() {}} }
+func Stop[S, V any]() Fx[S, V] { return Fx[S, V]{stp: func() {}} }
 
-// Replace with y if x is already Halted. Otherwise x continues.
+// Replace with y if x is already stopped. Otherwise x continues.
 func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
 	return func(x Fx[S, V]) Fx[S, V] {
-		if x.hlt != nil {
+		if x.stp != nil {
 			return y()
 		}
 		if x.imm != nil {
@@ -48,8 +47,8 @@ func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
 // Continue an effect by transforming its immediate value into another effect.
 func Cont[T, U, S, V any](cmap func(T) S, fmap func(V) Fx[T, U]) func(Fx[S, V]) Fx[T, U] {
 	return func(e Fx[S, V]) Fx[T, U] {
-		if e.hlt != nil {
-			return Halt[T, U]()
+		if e.stp != nil {
+			return Stop[T, U]()
 		}
 		if e.imm != nil {
 			return fmap(e.imm())
@@ -80,8 +79,8 @@ func right[A, B any](ab And[A, B]) B {
 
 func ContraMap[V, S, R any](f func(R) S) func(Fx[S, V]) Fx[R, V] {
 	return func(e Fx[S, V]) Fx[R, V] {
-		if e.hlt != nil {
-			return Halt[R, V]()
+		if e.stp != nil {
+			return Stop[R, V]()
 		}
 		if e.imm != nil {
 			return Const[R](e.imm())
@@ -161,8 +160,8 @@ func ProvideRight[A, B, V any](e Fx[And[A, B], V], b B) Fx[A, V] {
 }
 
 func ProvideLeft[A, B, V any](e Fx[And[A, B], V], a A) Fx[B, V] {
-	if e.hlt != nil {
-		return Halt[B, V]()
+	if e.stp != nil {
+		return Stop[B, V]()
 	}
 	if e.imm != nil {
 		return Const[B](e.imm())
@@ -171,8 +170,8 @@ func ProvideLeft[A, B, V any](e Fx[And[A, B], V], a A) Fx[B, V] {
 		var ab And[A, B] = func() (A, B) { return a, b }
 		for {
 			e = e.sus(ab)
-			if e.hlt != nil {
-				return Halt[B, V]()
+			if e.stp != nil {
+				return Stop[B, V]()
 			}
 			if e.imm != nil {
 				return Const[B](e.imm())
@@ -199,7 +198,7 @@ func Handle[F ~func(Fx[And[A, B], O]) Fx[B, O], A ~func(I) Fx[B, O], B, I, O any
 
 func Eval[V any](e Fx[Nil, V]) V {
 	for {
-		if e.hlt != nil {
+		if e.stp != nil {
 			panic("tried to evaluate halted effect. try using fx.Replace with another effect.")
 		}
 		if e.imm != nil {
