@@ -1,6 +1,6 @@
 package abort
 
-import fx "github.com/vic/fx.go"
+import "github.com/vic/fx.go/fx"
 
 type AbortFn[E any] func(E) fx.FxNil
 type AbortAb[E any] = fx.And[AbortFn[E], fx.Nil]

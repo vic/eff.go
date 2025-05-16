@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	fx "github.com/vic/fx.go"
+	"github.com/vic/fx.go/fx"
 )
 
 func TestReadWrite(t *testing.T) {

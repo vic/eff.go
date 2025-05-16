@@ -1,6 +1,6 @@
 package rw
 
-import fx "github.com/vic/fx.go"
+import "github.com/vic/fx.go/fx"
 
 type Reader[T any] func() *T
 

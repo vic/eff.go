@@ -1,7 +1,7 @@
 package rw
 
 import (
-	fx "github.com/vic/fx.go"
+	"github.com/vic/fx.go/fx"
 )
 
 type Writer[T any] func(*T)

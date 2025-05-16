@@ -1,6 +1,6 @@
 package abort
 
-import fx "github.com/vic/fx.go"
+import "github.com/vic/fx.go/fx"
 
 type Result[V, E any] func() (*V, *E)
 
