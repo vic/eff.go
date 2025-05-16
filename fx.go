@@ -15,36 +15,22 @@ type pnil struct{}
 var PNil Nil = Nil(pnil{})
 var PureNil FxNil = Pure(PNil)
 
-func Pure[V any](v V) FxPure[V] {
-	return Const[Nil](v)
-}
+func Pure[V any](v V) FxPure[V] { return Const[Nil](v) }
 
 func identity[V any](v V) V { return v }
 
-func Const[S, V any](v V) Fx[S, V] {
-	return Fx[S, V]{imm: func() V { return v }}
-}
+func Const[S, V any](v V) Fx[S, V] { return Fx[S, V]{imm: func() V { return v }} }
 
-func Pending[S, V any](f func(S) Fx[S, V]) Fx[S, V] {
-	return Fx[S, V]{sus: f}
-}
+func Pending[S, V any](f func(S) Fx[S, V]) Fx[S, V] { return Fx[S, V]{sus: f} }
 
 func Func[S, V any](f func(S) V) Fx[S, V] {
 	return Pending(func(s S) Fx[S, V] { return Const[S](f(s)) })
 }
 
-func Apply[F ~func(I) O, I, O any](i I) Fx[F, O] {
-	return Map(Ctx[F](), func(f F) O { return f(i) })
-}
-
-func Ctx[V any]() Fx[V, V] {
-	return Func(identity[V])
-}
+func Ctx[V any]() Fx[V, V] { return Func(identity[V]) }
 
 // An effect that will never be continued.
-func Halt[S, V any]() Fx[S, V] {
-	return Fx[S, V]{hlt: func() {}}
-}
+func Halt[S, V any]() Fx[S, V] { return Fx[S, V]{hlt: func() {}} }
 
 // Replace with y if x is already Halted. Otherwise x continues.
 func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
@@ -74,12 +60,12 @@ func Cont[T, U, S, V any](cmap func(T) S, fmap func(V) Fx[T, U]) func(Fx[S, V]) 
 
 type And[A, B any] func() (A, B)
 
-func rswap[A, B any](ba And[B, A]) And[A, B] {
-	var ab And[A, B] = func() (A, B) {
-		b, a := ba()
-		return a, b
+func swap[A, B any](ab And[A, B]) And[B, A] {
+	var ba And[B, A] = func() (B, A) {
+		a, b := ab()
+		return b, a
 	}
-	return ab
+	return ba
 }
 
 func left[A, B any](ab And[A, B]) A {
@@ -135,7 +121,7 @@ func AndNil[S, V any](e Fx[S, V]) Fx[And[S, Nil], V] {
 }
 
 func AndSwap[A, B, V any](e Fx[And[A, B], V]) Fx[And[B, A], V] {
-	return Cont[And[B, A], V](rswap, Const)(e)
+	return Cont[And[B, A], V](swap[B, A], Const)(e)
 }
 
 func AndJoin[A, B, V any](e Fx[A, Fx[B, V]]) Fx[And[A, B], V] {
@@ -193,6 +179,10 @@ func ProvideLeft[A, B, V any](e Fx[And[A, B], V], a A) Fx[B, V] {
 			}
 		}
 	})
+}
+
+func Apply[F ~func(I) O, I, O any](i I) Fx[F, O] {
+	return Map(Ctx[F](), func(f F) O { return f(i) })
 }
 
 func Suspend[A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[A, B], O] {
