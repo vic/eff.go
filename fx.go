@@ -144,15 +144,19 @@ func AndNil[S, V any](e Fx[S, V]) Fx[And[S, Nil], V] {
 	return Then[And[S, Nil], V](left, Const)(e)
 }
 
+func AndContra[A, B, V any](e Fx[A, V], f func(B) A) Fx[B, V] {
+	return ContraMap[V](f)(e)
+}
+
 func AndSwap[A, B, V any](e Fx[And[A, B], V]) Fx[And[B, A], V] {
 	return Then[And[B, A], V](swap[B, A], Const)(e)
 }
 
-func AndJoin[A, B, V any](e Fx[A, Fx[B, V]]) Fx[And[A, B], V] {
+func AndFlat[A, B, V any](e Fx[A, Fx[B, V]]) Fx[And[A, B], V] {
 	return FlatMap(e, identity)
 }
 
-func AndDisjoin[A, B, V any](e Fx[And[A, B], V]) Fx[A, Fx[B, V]] {
+func AndNest[A, B, V any](e Fx[And[A, B], V]) Fx[A, Fx[B, V]] {
 	return Pending(func(a A) Fx[A, Fx[B, V]] { return Const[A](ProvideLeft(e, a)) })
 }
 
@@ -161,7 +165,7 @@ func AndCollapse[A, V any](e Fx[And[A, A], V]) Fx[A, V] {
 }
 
 func ProvideFirstLeft[A, B, C, V any](e Fx[And[And[A, C], B], V], a A) Fx[And[C, B], V] {
-	return AndJoin(ProvideLeft(AndDisjoin(e), a))
+	return AndFlat(ProvideLeft(AndNest(e), a))
 }
 
 func ProvideFirstRight[A, B, D, V any](e Fx[And[A, And[B, D]], V], b B) Fx[And[A, D], V] {
@@ -214,7 +218,7 @@ func Apply[F ~func(I) O, I, O any](i I) Fx[F, O] {
 }
 
 func Suspend[A ~func(I) Fx[B, O], B, I, O any](i I) Fx[And[A, B], O] {
-	return AndJoin(Apply[A](i))
+	return AndFlat(Apply[A](i))
 }
 
 func Handler[A ~func(I) Fx[B, O], B, I, O any](a A) func(Fx[And[A, B], O]) Fx[B, O] {
