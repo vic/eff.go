@@ -13,7 +13,7 @@ func AbortHandler[V, E any](e AbortFx[E, V]) fx.FxPure[Result[V, E]] {
 	var err Result[V, E]
 	var abortFn AbortFn[E] = func(e E) fx.FxNil {
 		err = failure[V](e)
-		return fx.Stop[fx.Nil, fx.Nil]()
+		return fx.Halt[fx.Nil, fx.Nil]()
 	}
 	succeeded := fx.Map(fx.ProvideLeft(e, abortFn), success[V, E])
 	failed := func() fx.FxPure[Result[V, E]] { return fx.Pure(err) }

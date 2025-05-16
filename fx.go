@@ -3,7 +3,7 @@ package fx
 type Fx[S, V any] struct {
 	imm func() V
 	sus func(S) Fx[S, V]
-	stp func()
+	stp func(any) Fx[S, V]
 }
 
 type FxPure[V any] = Fx[Nil, V]
@@ -29,7 +29,14 @@ func Func[S, V any](f func(S) V) Fx[S, V] {
 
 func Ctx[V any]() Fx[V, V] { return Func(identity[V]) }
 
-func Stop[S, V any]() Fx[S, V] { return Fx[S, V]{stp: func() {}} }
+// An stopped effect that panics if restarted
+func Halt[S, V any]() Fx[S, V] {
+	return Stop(func(x any) Fx[S, V] {
+		panic("tried to restart halted effect. try using fx.Replace instead")
+	})
+}
+
+func Stop[S, V any](f func(any) Fx[S, V]) Fx[S, V] { return Fx[S, V]{stp: f} }
 
 // Replace with y if x is already stopped. Otherwise x continues.
 func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
@@ -48,7 +55,9 @@ func Replace[S, V any](y func() Fx[S, V]) func(Fx[S, V]) Fx[S, V] {
 func Cont[T, U, S, V any](cmap func(T) S, fmap func(V) Fx[T, U]) func(Fx[S, V]) Fx[T, U] {
 	return func(e Fx[S, V]) Fx[T, U] {
 		if e.stp != nil {
-			return Stop[T, U]()
+			return Stop(func(x any) Fx[T, U] {
+				return Cont(cmap, fmap)(e.stp(x))
+			})
 		}
 		if e.imm != nil {
 			return fmap(e.imm())
@@ -80,7 +89,9 @@ func right[A, B any](ab And[A, B]) B {
 func ContraMap[V, S, R any](f func(R) S) func(Fx[S, V]) Fx[R, V] {
 	return func(e Fx[S, V]) Fx[R, V] {
 		if e.stp != nil {
-			return Stop[R, V]()
+			return Stop(func(x any) Fx[R, V] {
+				return ContraMap[V](f)(e.stp(x))
+			})
 		}
 		if e.imm != nil {
 			return Const[R](e.imm())
@@ -161,22 +172,30 @@ func ProvideRight[A, B, V any](e Fx[And[A, B], V], b B) Fx[A, V] {
 
 func ProvideLeft[A, B, V any](e Fx[And[A, B], V], a A) Fx[B, V] {
 	if e.stp != nil {
-		return Stop[B, V]()
+		return Stop(func(x any) Fx[B, V] {
+			return ProvideLeft(e.stp(x), a)
+		})
 	}
 	if e.imm != nil {
 		return Const[B](e.imm())
 	}
 	return Pending(func(b B) Fx[B, V] {
 		var ab And[A, B] = func() (A, B) { return a, b }
-		for {
-			e = e.sus(ab)
-			if e.stp != nil {
-				return Stop[B, V]()
-			}
-			if e.imm != nil {
-				return Const[B](e.imm())
+		var loop func(e Fx[And[A, B], V]) Fx[B, V]
+		loop = func(e Fx[And[A, B], V]) Fx[B, V] {
+			for {
+				e = e.sus(ab)
+				if e.stp != nil {
+					return Stop(func(x any) Fx[B, V] {
+						return loop(e.stp(x))
+					})
+				}
+				if e.imm != nil {
+					return Const[B](e.imm())
+				}
 			}
 		}
+		return loop(e)
 	})
 }
 
